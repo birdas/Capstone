@@ -39,9 +39,9 @@ def define(words):
     doc = nlp(words)
     nouns = [chunk.text for chunk in doc.noun_chunks]
     verbs = [token.lemma_ for token in doc if token.pos_ == "VERB"]
-    print("Nouns:", nouns)
-    print("Verbs:", verbs)
-
+    nouns = list(set(nouns))
+    verbs = list(set(verbs))
+    
     for noun in nouns:
         if ' and ' in noun:
             arr = noun.split(' and ')
@@ -53,18 +53,50 @@ def define(words):
             for i in arr:
                 nouns.append(i)
             continue
+        if 'the ' in noun:
+            arr = noun.split('the ')
+            for i in arr:
+                nouns.append(i)
+            continue
+        if 'this ' in noun:
+            arr = noun.split('this ')
+            for i in arr:
+                nouns.append(i)
+            continue
+        if 'an ' in noun:
+            arr = noun.split('an ')
+            for i in arr:
+                nouns.append(i)
+            continue
+        if 'a ' in noun:
+            arr = noun.split('a ')
+            for i in arr:
+                nouns.append(i)
+            continue
+    
+    print("Nouns:", nouns)
+    print("Verbs:", verbs)
 
+    for noun in nouns:
         wiki_wiki = wikipediaapi.Wikipedia('en')
         page_py = wiki_wiki.page(noun)
-        index = page_py.summary.find('.')
-        print(noun.upper() + ': ' + page_py.summary[:index] + '.\n')
+        if page_py.exists() and noun != '':    
+            index = page_py.summary.find('.')
+            print(noun.upper() + ': ' + page_py.summary[:index] + '.\n')
+
+    return nouns, verbs
 
 
 def main():
+    file_ = open('test2.txt', 'a')
     while (True):
         words = speech_recog()
+        nouns, verbs = define(words)
+
+        file_.writelines([words + '\n', str(nouns) + '\n', str(verbs) + '\n', '\n'])
         #words = 'i am taking classes on cryptography and graph theory on tuesdays.'
-        define(words)
         #test()
+        print('\n\n\n')
+    file_.close()
 
 main()
