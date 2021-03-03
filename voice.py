@@ -42,47 +42,31 @@ def define(words):
     nouns = list(set(nouns))
     verbs = list(set(verbs))
     
+    bad_words = [' and ', 'that ', 'the ', 'this ', 'an ', 'a ']
+    clean_nouns = []
     for noun in nouns:
-        if ' and ' in noun:
-            arr = noun.split(' and ')
-            for i in arr:
-                nouns.append(i)
-            continue
-        if 'that ' in noun:
-            arr = noun.split('that ')
-            for i in arr:
-                nouns.append(i)
-            continue
-        if 'the ' in noun:
-            arr = noun.split('the ')
-            for i in arr:
-                nouns.append(i)
-            continue
-        if 'this ' in noun:
-            arr = noun.split('this ')
-            for i in arr:
-                nouns.append(i)
-            continue
-        if 'an ' in noun:
-            arr = noun.split('an ')
-            for i in arr:
-                nouns.append(i)
-            continue
-        if 'a ' in noun:
-            arr = noun.split('a ')
-            for i in arr:
-                nouns.append(i)
-            continue
-    
+        for bad_word in bad_words:
+            split = False
+            if bad_word in noun and not split:
+                arr = noun.split(bad_word)
+                split = True
+                for i in arr:
+                    if i != '':
+                        clean_nouns.append(i)
+                continue
+        if not split:
+            clean_nouns.append(noun)
+
     print("Nouns:", nouns)
     print("Verbs:", verbs)
 
-    for noun in nouns:
+
+    for noun in clean_nouns:
         wiki_wiki = wikipediaapi.Wikipedia('en')
         page_py = wiki_wiki.page(noun)
         if page_py.exists() and noun != '':    
             index = page_py.summary.find('.')
-            print(noun.upper() + ': ' + page_py.summary[:index] + '.\n')
+            print('\033[1m' + noun.upper() + ':\033[0m ' + page_py.summary[:index] + '.\n')
 
     return nouns, verbs
 
@@ -96,7 +80,7 @@ def main():
         file_.writelines([words + '\n', str(nouns) + '\n', str(verbs) + '\n', '\n'])
         #words = 'i am taking classes on cryptography and graph theory on tuesdays.'
         #test()
-        print('\n\n\n')
+        print('\n\n')
     file_.close()
 
 main()
