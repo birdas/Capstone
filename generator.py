@@ -1,21 +1,48 @@
 #probabalistic sentence generation
 from tabulate import tabulate
 from random import randint, seed
+import csv
+
 gamma = {}
 bigram_freq = {}
 preds = {}
 succs = {}
 
+def init():
+    global N
+    N = 0
+    with open('ngrams_words_3.txt', newline='') as lines:
+        reader = csv.reader(lines, delimiter = '\t')
+        for line in reader:
+            line = ' '.join(line)
+            line = line.lower().split(' ')
+            #print(line[1:4])
+            gamma[line[1]] = gamma.get(line[1], 0) + 1
+            gamma[line[2]] = gamma.get(line[2], 0) + 1
+            gamma[line[3]] = gamma.get(line[3], 0) + 1
+            N += 3
+            if line[2] not in preds:
+                preds[line[2]] = [line[1]]
+            else:
+                preds[line[2]].append(line[1])
 
-def init(words):
+            if line[2] not in succs:
+                succs[line[2]] = [line[3]]
+            else:
+                succs[line[2]].append(line[3])
+
+            bigram_freq[line[1] + ' ' + line[2]] = bigram_freq.get(line[1] + ' ' + line[2], 0) + int(line[0])
+            bigram_freq[line[2] + ' ' + line[3]] = bigram_freq.get(line[2] + ' ' + line[3], 0) + int(line[0])
+
+
+def finetune(words):
     for char in words:
         if char in "?.!,/;:'()":
             words = words.replace(char, '')
 
     word_list = words.lower().split(' ')
-    global N 
-    
-    N = len(word_list)
+    global N
+    N += len(word_list)
     for i in range(len(word_list)):
         gamma[word_list[i]] = gamma.get(word_list[i], 0) + 1
         if i != 0:
@@ -128,8 +155,11 @@ def markov_chain(word_):
 
     word = word_
     #seed(27) #Only for testing
-    for _ in range(10):
-        sen += word + ' '
+    for _ in range(20):
+        if word == "n't":
+            sen += word
+        else:
+            sen += ' ' + word
         
         markov = {}
         sum_ = 0
@@ -145,7 +175,7 @@ def markov_chain(word_):
         for s in markov.keys():
             chain[s] = (markov[s] / sum_) + prev
             prev = chain[s]
-        pick = randint(0, 10000000) / 10000000
+        pick = randint(0, 10000000000000) / 10000000000000
         #print('Chain:', chain)
         for s in chain.keys():
             if pick <= chain[s]:
@@ -153,14 +183,16 @@ def markov_chain(word_):
                 break
         #print('Next word:', word)
         #print('\n')
+    sen = sen[1:]
     print('Generated sentence of of "' + word_ + '" is:', sen)
 
 
 
+
 string = "In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and an oozy smell, nor yet a dry, bare, sandy hole with nothing in it to sit down on or to eat; it was a hobbit-hole, and that means comfort. It had a perfectly round door like a porthole, painted green, with a shiny yellow brass knob in the exact middle. The door opened on to a tube-shaped hall like a tunnel: a very comfortable tunnel without smoke, with paneled walls, and floors tiled and carpeted, provided with polished chairs, and lots and lots of pegs for hats and coats – the hobbit was fond of visitors. The tunnel wound on and on, going fairly but not quite straight into the side of the hill – The Hill, as all the people for many miles round called it – and many little round doors opened out of it, first on one side and then on another. No going upstairs for the hobbit: bedrooms, bathrooms, cellars, pantries (lots of these), wardrobes (he had whole rooms devoted to clothes), kitchens, dining-rooms, all were on the same floor, and indeed on the same passage. The best rooms were all on the left-hand side (going in), for these were the only ones to have windows, deep-set round windows looking over his garden, and meadows beyond, sloping down to the river. This hobbit was a very well-to-do hobbit, and his name was Baggins. The Bagginses had lived in the neighbourhood of The Hill for time out of mind, and people considered them very respectable, not only because most of them were rich, but also because they never had any adventures or did anything unexpected: you could tell what a Baggins would say on any question without the bother of asking him. This is a story of how a Baggins had an adventure, and found himself doing and saying things altogether unexpected. He may have lost the neighbours’ respect, but he gained – well, you will see whether he gained anything in the end."
-init(string)
-#display()
+init()
+finetune(string)
 word_ = input('Input a word to generate a sentence on: ')
 while word_ != 'quit':
     markov_chain(word_)
-    word_ = input('\nInput a word to generate a sentence on: ')
+    word_ = input('\n\nInput a word to generate a sentence on: ')
