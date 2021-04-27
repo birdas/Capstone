@@ -24,10 +24,8 @@ def speech_recog():
 
     #Initialize Microphone
     with sr.Microphone() as source:
-        #print("Say anything: ")
         if not calibrated:
             calibrated = True
-            print('Calibrating...')
             r.adjust_for_ambient_noise(source)
         audio = r.listen(source)
 
@@ -37,8 +35,6 @@ def speech_recog():
     except: 
         print("Recognition failed.")
 
-    #print("You said: " + words)
-    #sep_words = words.split(' ')
     return words
 
 
@@ -86,11 +82,13 @@ def define(words):
             if not split:
                 clean_nouns.append(noun)
 
+    """
     print('Nouns and Noun Chunks:', clean_nouns)
     print('Verbs:', verbs)
     print('Adverbs:', adverbs)
     print('Adjectives:', adjectives)
-    
+    """
+
     #define
     for noun in clean_nouns:
         wiki_wiki = wikipediaapi.Wikipedia('en')
@@ -115,24 +113,9 @@ def incrementCounts(nouns):
         counts[key] = counts.get(key, 0) + 1
 
 
-def main():
-    #file_ = open('test4.txt', 'a')
-    init()
-    while (True):
-        words = speech_recog()
-        #words = 'I have classes on graph theory and cryptography on tuesdays and thursdays.'
-        print('Sentence: ', words)
-        define(words)
-        #print(counts)
 
-        finetune(words)
-        imp = important(words)
-        markov_chain(imp)
 
-        #file_.writelines([words + '\n', str(nouns) + '\n', str(verbs) + '\n', '\n'])
-        print('\n\n')
-    #file_.close()
-    
+
 from tabulate import tabulate
 from random import randint, seed
 import csv
@@ -142,9 +125,14 @@ bigram_freq = {}
 preds = {}
 succs = {}
 
+score_gamma = {}
+score_bigram_freq = {}
+score_preds = {}
+score_succs = {}
+
 def init():
-    global N
-    N = 0
+    global N, score_N
+    N, score_N = 0, 0
     with open('ngrams_words_3.txt', newline='') as lines:
         reader = csv.reader(lines, delimiter = '\t')
         for line in reader:
@@ -169,27 +157,42 @@ def init():
             bigram_freq[line[2] + ' ' + line[3]] = bigram_freq.get(line[2] + ' ' + line[3], 0) + int(line[0])
 
 
+
+
 def finetune(words):
     for char in words:
         if char in "?.!,/;:'()":
             words = words.replace(char, '')
 
     word_list = words.lower().split(' ')
-    global N
+    global N, score_N
     N += len(word_list)
+    score_N += len(word_list)
     for i in range(len(word_list)):
         gamma[word_list[i]] = gamma.get(word_list[i], 0) + 1
+        score_gamma[word_list[i]] = score_gamma.get(word_list[i], 0) + 1
         if i != 0:
             if word_list[i] not in preds:
                 preds[word_list[i]] = [word_list[i - 1]]
             else:
                 preds[word_list[i]].append(word_list[i - 1])
+            if word_list[i] not in score_preds:
+                score_preds[word_list[i]] = [word_list[i - 1]]
+            else:
+                score_preds[word_list[i]].append(word_list[i - 1])
         if i != len(word_list) - 1:
             bigram_freq[word_list[i] + ' ' + word_list[i + 1]] = bigram_freq.get(word_list[i] + ' ' + word_list[i + 1], 0) + 1
+            score_bigram_freq[word_list[i] + ' ' + word_list[i + 1]] = score_bigram_freq.get(word_list[i] + ' ' + word_list[i + 1], 0) + 1
             if word_list[i] not in succs:
                 succs[word_list[i]] = [word_list[i + 1]]
             else:
                 succs[word_list[i]].append(word_list[i + 1])
+            if word_list[i] not in score_succs:
+                score_succs[word_list[i]] = [word_list[i + 1]]
+            else:
+                score_succs[word_list[i]].append(word_list[i + 1])
+
+
 
 
 def score(w):
@@ -199,64 +202,76 @@ def score(w):
 def pred_score(w): 
     if avg_pred_prob(w) == 0:
         return 0
-    gamma_len = len(gamma)
+    gamma_len = len(score_gamma)
     #Testing
-    for y_i in gamma.keys():
+    for y_i in score_gamma.keys():
         assert prob(y_i, w) >= 0 and prob(y_i, w) <= 1
-    #print(avg_pred_prob(w))
     assert avg_pred_prob(w) >= 0 and avg_pred_prob(w) <= 1
 
-    sum_ = sum(((prob(w, y_i) + avg_pred_prob(w)) / avg_pred_prob(w)) ** 2 for y_i in gamma.keys())
+    sum_ = sum(((prob(w, y_i) + avg_pred_prob(w)) / avg_pred_prob(w)) ** 2 for y_i in score_gamma.keys())
     return (sum_ / (gamma_len - 1)) ** .5
 
 
 def succ_score(w):
     if avg_succ_prob(w) == 0:
         return 0
-    gamma_len = len(gamma)
+    gamma_len = len(score_gamma)
     #Testing
-    for y_i in gamma.keys():
+    for y_i in score_gamma.keys():
         assert prob(y_i, w) >= 0 and prob(y_i, w) <= 1
-    #print(avg_pred_prob(w))
     assert avg_pred_prob(w) >= 0 and avg_pred_prob(w) <= 1
 
-    sum_ = sum(((prob(y_i, w) + avg_succ_prob(w)) / avg_succ_prob(w)) ** 2 for y_i in gamma.keys())
+    sum_ = sum(((prob(y_i, w) + avg_succ_prob(w)) / avg_succ_prob(w)) ** 2 for y_i in score_gamma.keys())
     return (sum_ / (gamma_len - 1)) ** .5
 
 
 def avg_pred_prob(w):
-    gamma_len = len(gamma)
-    return sum(prob(w, y_i) for y_i in gamma.keys()) / gamma_len
+    gamma_len = len(score_gamma)
+    return sum(prob(w, y_i) for y_i in score_gamma.keys()) / gamma_len
 
 
 def avg_succ_prob(w):
-    gamma_len = len(gamma)
-    return sum(prob(y_i, w) for y_i in gamma.keys()) / gamma_len
+    gamma_len = len(score_gamma)
+    return sum(prob(y_i, w) for y_i in score_gamma.keys()) / gamma_len
 
 
 def prob(w, y_i):
+    if w + ' ' + y_i not in score_bigram_freq:
+        return 0
+    return score_bigram_freq[w + ' ' + y_i] / score_N
+
+
+def m_prob(w, y_i):
     if w + ' ' + y_i not in bigram_freq:
         return 0
-    return bigram_freq[w + ' ' + y_i] / N
+    return bigram_freq[w + ' ' + y_i] / N    
 
 
 def syllable_count(word): #https://stackoverflow.com/questions/46759492/syllable-count-in-python
-    word = word.lower()
-    count = 0
-    vowels = "aeiouy"
-    if word[0] in vowels:
-        count += 1
-    for index in range(1, len(word)):
-        if word[index] in vowels and word[index - 1] not in vowels:
+    print('syllable word is:', word)
+    if word != '':
+        word = word.lower()
+        count = 0
+        vowels = "aeiouy"
+        if word[0] in vowels:
             count += 1
-    if word.endswith("e"):
-        count -= 1
-    if count == 0:
-        count += 1
-    return count
+        for index in range(1, len(word)):
+            if word[index] in vowels and word[index - 1] not in vowels:
+                count += 1
+        if word.endswith("e"):
+            count -= 1
+        if count == 0:
+            count += 1
+        return count
+    else: 
+        return 0
+
+
+
 
 
 def important(words):
+    words = words.split(' ')
     best = ''
     best_score = 0.0
     for w in words:
@@ -281,6 +296,10 @@ def display():
     print('\nMost important word is:', important(list(gamma.keys())))
 
 
+
+
+
+
 def markov_chain(word_):
     sen = ''
 
@@ -298,27 +317,47 @@ def markov_chain(word_):
         markov = {}
         sum_ = 0
         for s in gamma.keys():
-            val = prob(word, s)
+            val = m_prob(word, s)
             if val != 0:
                 markov[s] = val
                 sum_ += markov[s]
-        #print('Markov:', markov)
-        #print('Sum:', sum_)
         prev = 0
         chain = {}
         for s in markov.keys():
             chain[s] = (markov[s] / sum_) + prev
             prev = chain[s]
         pick = randint(0, 10000000000000) / 10000000000000
-        #print('Chain:', chain)
         for s in chain.keys():
             if pick <= chain[s]:
                 word = s
                 break
-        #print('Next word:', word)
-        #print('\n')
     sen = sen[1:]
     print('Generated sentence of of "' + word_ + '" is:', sen)
 
+
+
+
+
+
+def main():
+    #file_ = open('test4.txt', 'a')
+    print('Initializing...')
+    init()
+    while (True):
+        words = speech_recog()
+        #words = 'I have classes on graph theory and cryptography on tuesdays and thursdays.'
+        print('Sentence: ', words)
+        define(words)
+        #print(counts)
+
+        finetune(words)
+        imp = important(words)
+        if imp != '':
+            markov_chain(imp)
+
+        #file_.writelines([words + '\n', str(nouns) + '\n', str(verbs) + '\n', '\n'])
+        print('\n\n')
+    #file_.close()
+    
     
 main()
