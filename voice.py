@@ -47,7 +47,7 @@ def define(words):
     verbs = [token.lemma_ for token in doc if token.pos_ == 'VERB']
     adverbs = [token.lemma_ for token in doc if token.pos_ == 'ADV']
     adjectives = [token.lemma_ for token in doc if token.pos_ == 'ADJ']
-
+    
     noun_chunks = list(set(noun_chunks))
     nouns = list(set(nouns))
     verbs = list(set(verbs))
@@ -248,7 +248,7 @@ def m_prob(w, y_i):
 
 
 def syllable_count(word): #https://stackoverflow.com/questions/46759492/syllable-count-in-python
-    print('syllable word is:', word)
+    #print('syllable word is:', word)
     if word != '':
         word = word.lower()
         count = 0
@@ -332,7 +332,7 @@ def markov_chain(word_):
                 word = s
                 break
     sen = sen[1:]
-    print('Generated sentence of of "' + word_ + '" is:', sen)
+    print('\033[1mGenerated sentence off of "' + word_ + '" is:\033[0m', sen)
 
 
 
@@ -344,9 +344,10 @@ def main():
     print('Initializing...')
     init()
     while (True):
-        words = speech_recog()
         #words = 'I have classes on graph theory and cryptography on tuesdays and thursdays.'
-        print('Sentence: ', words)
+        words = speech_recog()
+        
+        print('\033[1mAudio Recorded: \033[0m', words, '\n')
         define(words)
         #print(counts)
 
