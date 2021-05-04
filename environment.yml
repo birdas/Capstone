@@ -1,4 +1,4 @@
-name: Arwen
+name: Definitions
 channels:
   - defaults
 dependencies:
