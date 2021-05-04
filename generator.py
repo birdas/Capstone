@@ -155,7 +155,7 @@ def markov_chain(word_):
 
     word = word_
     #seed(27) #Only for testing
-    for _ in range(20):
+    for _ in range(15):
         if word == "n't":
             sen += word
         else:
